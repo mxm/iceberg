@@ -21,9 +21,8 @@ package org.apache.iceberg.flink.source.reader;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.table.data.GenericRowData;
 import org.apache.flink.table.data.RowData;
-import org.apache.flink.table.runtime.typeutils.InternalSerializers;
 import org.apache.flink.table.types.logical.RowType;
-import org.apache.iceberg.flink.FlinkRowData;
+import org.apache.iceberg.flink.FlinkSchemaUtil;
 import org.apache.iceberg.flink.data.RowDataUtil;
 
 class RowDataRecordFactory implements RecordFactory<RowData> {
@@ -33,23 +32,8 @@ class RowDataRecordFactory implements RecordFactory<RowData> {
 
   RowDataRecordFactory(RowType rowType) {
     this.rowType = rowType;
-    this.fieldSerializers = createFieldSerializers(rowType);
-    this.fieldGetters = createFieldGetters(rowType);
-  }
-
-  static TypeSerializer[] createFieldSerializers(RowType rowType) {
-    return rowType.getChildren().stream()
-        .map(InternalSerializers::create)
-        .toArray(TypeSerializer[]::new);
-  }
-
-  static RowData.FieldGetter[] createFieldGetters(RowType rowType) {
-    RowData.FieldGetter[] fieldGetters = new RowData.FieldGetter[rowType.getFieldCount()];
-    for (int i = 0; i < rowType.getFieldCount(); ++i) {
-      fieldGetters[i] = FlinkRowData.createFieldGetter(rowType.getTypeAt(i), i);
-    }
-
-    return fieldGetters;
+    this.fieldSerializers = FlinkSchemaUtil.createFieldSerializers(rowType);
+    this.fieldGetters = FlinkSchemaUtil.createFieldGetters(rowType);
   }
 
   @Override
