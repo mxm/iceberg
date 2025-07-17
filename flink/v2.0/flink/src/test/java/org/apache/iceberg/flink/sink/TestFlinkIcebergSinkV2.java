@@ -55,7 +55,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 @ExtendWith(ParameterizedTestExtension.class)
 @Timeout(value = 60)
-public class TestFlinkIcebergSinkV2 extends TestFlinkIcebergSinkV2Base {
+public class TestFlinkIcebergSinkV2 extends FlinkIcebergSinkV2TestBase {
   @RegisterExtension
   public static final MiniClusterExtension MINI_CLUSTER_EXTENSION =
       MiniFlinkClusterExtension.createWithClassloaderCheckDisabled();

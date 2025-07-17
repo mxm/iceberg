@@ -24,7 +24,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assumptions.assumeThat;
 
 import java.util.List;
-import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.test.junit5.MiniClusterExtension;
@@ -35,7 +34,6 @@ import org.apache.iceberg.FileFormat;
 import org.apache.iceberg.MetadataColumns;
 import org.apache.iceberg.ParameterizedTestExtension;
 import org.apache.iceberg.PartitionSpec;
-import org.apache.iceberg.Snapshot;
 import org.apache.iceberg.SnapshotRef;
 import org.apache.iceberg.TableProperties;
 import org.apache.iceberg.data.Record;
@@ -56,7 +54,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 @ExtendWith(ParameterizedTestExtension.class)
 @Timeout(value = 60)
-public class TestIcebergSinkV2 extends TestFlinkIcebergSinkV2Base {
+public class TestIcebergSinkV2 extends FlinkIcebergSinkV2TestBase {
   @RegisterExtension
   public static final MiniClusterExtension MINI_CLUSTER_EXTENSION =
       MiniFlinkClusterExtension.createWithClassloaderCheckDisabled();
@@ -233,55 +231,5 @@ public class TestIcebergSinkV2 extends TestFlinkIcebergSinkV2Base {
             deleteFile.lowerBounds().get(MetadataColumns.DELETE_FILE_PATH.fieldId()).array());
     DataFile dataFile = table.currentSnapshot().addedDataFiles(table.io()).iterator().next();
     assumeThat(fromStat).isEqualTo(dataFile.location());
-  }
-
-  protected void testChangeLogs(
-      List<String> equalityFieldColumns,
-      KeySelector<Row, Object> keySelector,
-      boolean insertAsUpsert,
-      List<List<Row>> elementsPerCheckpoint,
-      List<List<Record>> expectedRecordsPerCheckpoint,
-      String branch)
-      throws Exception {
-    DataStream<Row> dataStream =
-        env.addSource(new BoundedTestSource<>(elementsPerCheckpoint), ROW_TYPE_INFO);
-
-    if (isTableSchema) {
-      IcebergSink.forRow(dataStream, SimpleDataUtil.FLINK_TABLE_SCHEMA)
-          .tableLoader(tableLoader)
-          .tableSchema(SimpleDataUtil.FLINK_TABLE_SCHEMA)
-          .writeParallelism(parallelism)
-          .equalityFieldColumns(equalityFieldColumns)
-          .upsert(insertAsUpsert)
-          .toBranch(branch)
-          .uidSuffix("sink")
-          .append();
-    } else {
-      IcebergSink.forRow(dataStream, SimpleDataUtil.FLINK_SCHEMA)
-          .tableLoader(tableLoader)
-          .resolvedSchema(SimpleDataUtil.FLINK_SCHEMA)
-          .writeParallelism(parallelism)
-          .equalityFieldColumns(equalityFieldColumns)
-          .upsert(insertAsUpsert)
-          .toBranch(branch)
-          .uidSuffix("sink")
-          .append();
-    }
-
-    // Execute the program.
-    env.execute("Test Iceberg Change-Log DataStream.");
-
-    table.refresh();
-    List<Snapshot> snapshots = findValidSnapshots();
-    int expectedSnapshotNum = expectedRecordsPerCheckpoint.size();
-    assertThat(snapshots).hasSize(expectedSnapshotNum);
-
-    for (int i = 0; i < expectedSnapshotNum; i++) {
-      long snapshotId = snapshots.get(i).snapshotId();
-      List<Record> expectedRecords = expectedRecordsPerCheckpoint.get(i);
-      assertThat(actualRowSet(snapshotId, "*"))
-          .as("Should have the expected records for the checkpoint#" + i)
-          .isEqualTo(expectedRowSet(expectedRecords.toArray(new Record[0])));
-    }
   }
 }

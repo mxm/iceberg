@@ -49,7 +49,7 @@ import org.apache.iceberg.relocated.com.google.common.collect.ImmutableMap;
 import org.apache.iceberg.relocated.com.google.common.collect.Lists;
 import org.apache.iceberg.util.StructLikeSet;
 
-class TestFlinkIcebergSinkV2Base {
+class FlinkIcebergSinkV2TestBase {
 
   static final int FORMAT_V2 = 2;
   static final TypeInformation<Row> ROW_TYPE_INFO =
@@ -357,22 +357,24 @@ class TestFlinkIcebergSinkV2Base {
         env.addSource(new BoundedTestSource<>(elementsPerCheckpoint), ROW_TYPE_INFO);
 
     if (isTableSchema) {
-      FlinkSink.forRow(dataStream, SimpleDataUtil.FLINK_TABLE_SCHEMA)
+      IcebergSink.forRow(dataStream, SimpleDataUtil.FLINK_TABLE_SCHEMA)
           .tableLoader(tableLoader)
           .tableSchema(SimpleDataUtil.FLINK_TABLE_SCHEMA)
           .writeParallelism(parallelism)
           .equalityFieldColumns(equalityFieldColumns)
           .upsert(insertAsUpsert)
           .toBranch(branch)
+          .uidSuffix("sink")
           .append();
     } else {
-      FlinkSink.forRow(dataStream, SimpleDataUtil.FLINK_SCHEMA)
+      IcebergSink.forRow(dataStream, SimpleDataUtil.FLINK_SCHEMA)
           .tableLoader(tableLoader)
           .resolvedSchema(SimpleDataUtil.FLINK_SCHEMA)
           .writeParallelism(parallelism)
           .equalityFieldColumns(equalityFieldColumns)
           .upsert(insertAsUpsert)
           .toBranch(branch)
+          .uidSuffix("sink")
           .append();
     }
 
